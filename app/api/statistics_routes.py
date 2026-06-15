@@ -7,7 +7,6 @@ from app.db.mongo import appointments_collection
 
 router = APIRouter()
 
-CLASSES = [0, 1, 2, 3, 4]
 
 
 def get_range(range_value):
@@ -143,6 +142,7 @@ def get_ecg_count(patient_id: str, range: str):
     return list(ecg_collection.aggregate(pipeline))
 
 
+CLASSES = [0, 1, 2, 3, 4]
 @router.get("/ml-evolution/{patient_id}")
 def get_ml_evolution(patient_id: str, range: str):
 

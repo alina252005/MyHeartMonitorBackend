@@ -1,22 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+import numpy as np
+
 from app.db.mongo import ecg_collection
 from app.services.file_service import download_from_url
 from app.services.mqtt_service import send_device_command
 from app.services.ecg_ai_service import analyze_ecg
-import numpy as np
-from fastapi import APIRouter, Query
-from app.services.ecg_ai_service import analyze_ecg
 
 router = APIRouter(tags=["ECG Management"])
 
-# Updated model to include first and last name for custom file naming
 class DeviceCommand(BaseModel):
     device_id: str
     command: str
     patient_id: str
-    first_name: str  # New field
-    last_name: str   # New field
+    first_name: str
+    last_name: str
 
 @router.post("/send-command")
 def send_command_to_pi(req: DeviceCommand):
@@ -24,13 +22,12 @@ def send_command_to_pi(req: DeviceCommand):
         raise HTTPException(status_code=400, detail="Command must be 'start' or 'stop'")
 
     try:
-
         send_device_command(
             device_id=req.device_id,
             command=req.command,
             patient_id=req.patient_id,
-            first_name=req.first_name, # Passed to MQTT service
-            last_name=req.last_name     # Passed to MQTT service
+            first_name=req.first_name,
+            last_name=req.last_name
         )
         return {"message": f"Command '{req.command}' sent successfully to {req.device_id}."}
 
@@ -39,7 +36,6 @@ def send_command_to_pi(req: DeviceCommand):
 
 @router.get("/latest/raw/{patient_id}")
 def get_latest_ecg_raw(patient_id: str):
-
     record = ecg_collection.find_one(
         {"patient_id": patient_id},
         sort=[("timestamp", -1)]
@@ -50,50 +46,26 @@ def get_latest_ecg_raw(patient_id: str):
 
     local_path = "data/temp_ecg.npy"
     download_from_url(record["file_url"], local_path)
-
-
     signal = np.load(local_path)
 
     return {
         "patient_id": record["patient_id"],
         "timestamp": record["timestamp"],
-        "sample_rate": record["sample_rate"],
+        "sample_rate": record.get("sample_rate", 250),
         "values": signal.tolist(),
         "file_url": record["file_url"],
-        "bpm": record.get("bpm",0)
-    }
-
-@router.get("/analyze")
-def analyze_ecg_endpoint(
-    patient_id: str = Query(...),
-    file_url: str = Query(...)
-):
-    result = analyze_ecg(patient_id, file_url)
-
-    return {
-        "status": "success",
-        "data": result
+        "bpm": record.get("bpm", 0)
     }
 
 @router.get("/raw-by-url")
 def get_ecg_raw_by_url(file_url: str = Query(...)):
-    record = ecg_collection.find_one(
-        {"file_url": file_url}
-    )
+    record = ecg_collection.find_one({"file_url": file_url})
 
     if not record:
-        raise HTTPException(
-            status_code=404,
-            detail="ECG record not found"
-        )
+        raise HTTPException(status_code=404, detail="ECG record not found")
 
     local_path = "data/temp_attached_ecg.npy"
-
-    download_from_url(
-        file_url,
-        local_path
-    )
-
+    download_from_url(file_url, local_path)
     signal = np.load(local_path)
 
     return {
@@ -105,16 +77,15 @@ def get_ecg_raw_by_url(file_url: str = Query(...)):
         "bpm": record.get("bpm", 0)
     }
 
-
 @router.get("/analyze")
 def analyze_ecg_endpoint(
     patient_id: str = Query(...),
     file_url: str = Query(...)
 ):
-    result = analyze_ecg(
-        patient_id,
-        file_url
-    )
+    result = analyze_ecg(patient_id, file_url)
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
 
     return {
         "status": "success",

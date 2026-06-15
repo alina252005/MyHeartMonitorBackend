@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from app.services.firebase_init import init_firebase
-from app.api.ecg import router as ecg_router
+from app.api.ecg_routes import router as ecg_router
 from app.auth.auth_routes import router as auth_router
 from app.admin.admin_routes import router as admin_router
-from app.api.appointments import router as appointments_router
-from app.api.ws import router as ws_router
-from app.api.statistics import router as statistics_router
+from app.api.appointments_routes import router as appointments_router
+from app.api.ws_routes import router as ws_router
+from app.api.statistics_routes import router as statistics_router
 
 init_firebase()
 

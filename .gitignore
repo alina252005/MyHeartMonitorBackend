@@ -7,3 +7,10 @@ serviceAccountKey.json
 data/temp_ecg.npy
 data/temp_attached_ecg.npy
 app/test/*.npy
+app/firebase.json
+app/services/firebase.json
+
+
+.idea/
+backend.zip
+temp/
