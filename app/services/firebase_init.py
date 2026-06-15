@@ -48,12 +48,19 @@ def initialize_firebase():
     if firebase_bucket:
         options["storageBucket"] = firebase_bucket.replace("gs://", "")
 
-    app = firebase_admin.initialize_app(cred, options)
+    app = firebase_admin.initialize_app(
+        cred,
+        options,
+    )
 
     print("Firebase initialized successfully")
     print(f"Firebase bucket: {firebase_bucket}")
 
     return app
+
+
+def init_firebase():
+    return initialize_firebase()
 
 
 firebase_app = initialize_firebase()
